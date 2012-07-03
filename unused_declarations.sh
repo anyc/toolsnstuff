@@ -8,7 +8,8 @@ if [ "$#" -ne "4" ]; then
 	echo "This script compares the list of declared symbols in a file with the list"
 	echo "of symbols present in the resulting binary. If declared symbols are not"
 	echo "present in the resulting binary, they are unused and can be removed in"
-	echo "order to reduce compilation time and file size."
+	echo "order to reduce compilation time and file size. Please note, this list"
+	echo "may contain false positives and may be incomplete!"
 	echo ""
 	echo "Example: - add \"-aux-info $<.aux\" to your Makefile CFLAGS"
 	echo "         - make clean; make"
@@ -35,3 +36,4 @@ echo "$unused" | xargs -i bash -c " echo -n \"{} - \" ; grep -e {} \"$1\""
 
 # remove temporary files
 rm $decls $syms
+
