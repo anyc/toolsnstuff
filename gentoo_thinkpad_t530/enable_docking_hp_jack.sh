@@ -8,3 +8,4 @@
 
 ./hda-verb /dev/snd/hwC0D0 0x1b SET_PIN_WIDGET_CONTROL 0x40
 ./hda-verb /dev/snd/hwC0D0 0x1b SET_AMP_GAIN_MUTE 0xb000
+./hda-verb /dev/snd/hwC0D0 0x1b SET_CONNECT_SEL 1
