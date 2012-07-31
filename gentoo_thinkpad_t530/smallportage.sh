@@ -32,17 +32,14 @@ fi
 /bin/echo "building rsync_excludes..."
 
 cat .damnsmallportage.tmp | sed -e 's/^/+ /' > rsync_excludes
-
-/bin/echo "- *-*/*" >> rsync_excludes
-
 cat .damnsmallportage.tmp | sed -e 's/^/+ metadata\/cache\//' -e 's/$/*/' >> rsync_excludes
 cat .damnsmallportage.tmp | sed -e 's/^/+ metadata\/md5-cache\//' -e 's/$/*/' >> rsync_excludes
 
 /bin/echo "- licenses**"          >> rsync_excludes
 /bin/echo "- metadata/cache/*/*"  >> rsync_excludes
 /bin/echo "- metadata/md5-cache/*/*"  >> rsync_excludes
-#/bin/echo "- metadata/timestamp*" >> rsync_excludes
 /bin/echo "- virtual/*"           >> rsync_excludes
+/bin/echo "- /*-*/*" >> rsync_excludes
 
 rm -f .damnsmallportage.tmp
 
