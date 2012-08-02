@@ -17,17 +17,29 @@
 
 # modified 2012-07-29 Mario Kicherer
 
-if [ ! -f /usr/bin/equery ]
-  then
+if [ ! -f /usr/bin/equery ]; then
     /bin/echo "/usr/bin/equery does NOT exist!"
     /bin/echo "Please emerge app-portage/gentoolkit"
     exit 1
 fi
 
-/bin/echo ""
+SKEL_FILE="/etc/portage/rsync_excludes.skel"
+
 /bin/echo "creating list of installed packages..."
 
 /usr/bin/equery list "*" | /bin/sed -e 's/-[0-9].*$//' -e '/* installed packages/d' > .damnsmallportage.tmp
+
+for x in $*; do
+	echo $x >> .damnsmallportage.tmp
+done
+
+if [ -f ${SKEL_FILE} ]; then
+	/bin/echo "Adding custom entries..."
+	cat ${SKEL_FILE} >> .damnsmallportage.tmp
+fi
+
+# sort entries (not required)
+#sort .damnsmallportage.tmp -o .damnsmallportage.tmp
 
 /bin/echo "building rsync_excludes..."
 
