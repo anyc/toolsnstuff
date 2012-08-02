@@ -1,7 +1,7 @@
 varlog_tmpfs
 ============
 
-Mounts /var/log as tmpfs and rsyncs log files at startup/shutdown
+Rsyncs log files at startup/shutdown in case /var/log is a tmpfs
 
 Installation:
 

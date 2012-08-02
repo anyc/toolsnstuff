@@ -2,7 +2,7 @@
 # Copyright (c) 2007-2008 Roy Marples <roy@marples.name>
 # Released under the 2-clause BSD license.
 
-description="Mounts /var/log as tmpfs and rsyncs log files at startup/shutdown"
+description="Rsyncs log files at startup/shutdown in case /var/log is a tmpfs"
 
 EXFILE="/etc/varlog_exclude"
 
@@ -13,7 +13,7 @@ depend()
 
 start()
 {
-	einfo "Setup /var/log"
+	einfo "Populate /var/log"
 
 	rsync -ar /var/log_permanent/ /var/log/
 
@@ -22,7 +22,7 @@ start()
 
 stop()
 {
-	einfo "Store /var/log"
+	einfo "Copy chosen files in /var/log to permanent storage"
 
 	rsync -ar /var/log/ /var/log_permanent/ --exclude-from=${EXFILE} --delete-after --delete-excluded
 
