@@ -17,6 +17,13 @@
 
 # modified 2012-07-29 Mario Kicherer
 
+# add the following to your /etc/make.conf
+#
+# PORTAGE_RSYNC_EXTRA_OPTS="--exclude-from=/etc/portage/rsync_excludes --delete-excluded --delete-before"
+#
+# and copy the rsync_excludes from local folder to /etc/portage/
+#
+
 if [ ! -f /usr/bin/equery ]; then
     /bin/echo "/usr/bin/equery does NOT exist!"
     /bin/echo "Please emerge app-portage/gentoolkit"
