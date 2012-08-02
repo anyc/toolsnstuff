@@ -1,0 +1,31 @@
+#!/sbin/runscript
+# Copyright (c) 2007-2008 Roy Marples <roy@marples.name>
+# Released under the 2-clause BSD license.
+
+description="Mounts /var/log as tmpfs and rsyncs log files at startup/shutdown"
+
+EXFILE="/etc/varlog_exclude"
+
+depend()
+{
+	after localmount
+}
+
+start()
+{
+	einfo "Setup /var/log"
+
+	rsync -ar /var/log_permanent/ /var/log/
+
+	eend 0
+}
+
+stop()
+{
+	einfo "Store /var/log"
+
+	rsync -ar /var/log/ /var/log_permanent/ --exclude-from=${EXFILE} --delete-after --delete-excluded
+
+	eend 0
+}
+

@@ -1,0 +1,11 @@
++ cron.log
++ cups
++ cups/*log
++ emerge.log
++ lastlog
++ messages*
++ portage**
++ samba**
++ tallylog
++ wtmp*
+- *
