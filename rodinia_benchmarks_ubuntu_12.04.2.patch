@@ -1,0 +1,262 @@
+diff -ur rodinia_2.3/common/make.config rodinia_2.3_patched/common/make.config
+--- rodinia_2.3/common/make.config	2013-02-23 01:29:49.000000000 +0100
++++ rodinia_2.3_patched/common/make.config	2013-05-02 19:15:55.041640332 +0200
+@@ -1,26 +1,32 @@
+ # CUDA toolkit installation path
+-CUDA_DIR = /usr/local/cuda
++CUDA_DIR = /opt/cuda/
+ 
+ # CUDA toolkit libraries
+ CUDA_LIB_DIR := $(CUDA_DIR)/lib
+ ifeq ($(shell uname -m), x86_64)
+      ifeq ($(shell if test -d $(CUDA_DIR)/lib64; then echo T; else echo F; fi), T)
+-     	CUDA_LIB_DIR := $(CUDA_DIR)/lib64
++     	CUDA_LIB_DIR := $(CUDA_DIR)/lib64 -L/usr/lib/nvidia-current/
+      endif
+ endif
+ 
+ # CUDA SDK installation path
+ #SDK_DIR = $(HOME)/NVIDIA_GPU_Computing_SDK/C
+-SDK_DIR =/if10/kw5na/NVIDIA_GPU_Computing_SDK4/C
++# SDK_DIR =/if10/kw5na/NVIDIA_GPU_Computing_SDK4/C
+ #SDK_DIR =/if10/kw5na/NVIDIA_CUDA_Computing_SDK4/C
++SDK_DIR=/opt/cuda/sdk/C/
+ 
+ # OPENCL
+ 
+ # NVIDIA_DIR
+ 
+-OPENCL_DIR =/if10/kw5na/NVIDIA_GPU_Computing_SDK4
+-OPENCL_INC = $(OPENCL_DIR)/OpenCL/common/inc
+-OPENCL_LIB = $(OPENCL_DIR)/OpenCL/common/lib -lOpenCL
++% OPENCL_DIR =/if10/kw5na/NVIDIA_GPU_Computing_SDK4
++% OPENCL_INC = $(OPENCL_DIR)/OpenCL/common/inc
++% OPENCL_LIB = $(OPENCL_DIR)/OpenCL/common/lib -lOpenCL
++
++OPENCL_DIR = /opt/nvidia/
++OPENCL_INC = /usr/include/nvidia-current/ -I/opt/cuda/include/
++OPENCL_LIB = /usr/lib/nvidia-current/ -lOpenCL
++
+ 
+ # AMD_DIR
+ #OPENCL_DIR = /home/sc5nf/ati-stream-sdk-v2.2-lnx64/
+Binary files rodinia_2.3/cuda/cfd/euler3d and rodinia_2.3_patched/cuda/cfd/euler3d differ
+diff -ur rodinia_2.3/cuda/kmeans/kmeans_cuda.cu rodinia_2.3_patched/cuda/kmeans/kmeans_cuda.cu
+--- rodinia_2.3/cuda/kmeans/kmeans_cuda.cu	2010-10-08 06:22:43.000000000 +0200
++++ rodinia_2.3_patched/cuda/kmeans/kmeans_cuda.cu	2013-05-02 18:51:08.625316081 +0200
+@@ -12,7 +12,7 @@
+ #define BLOCKS_PER_DIM 16
+ #define THREADS_PER_BLOCK THREADS_PER_DIM*THREADS_PER_DIM
+ 
+-#include <kmeans_cuda_kernel.cu>
++#include "kmeans_cuda_kernel.cu"
+ 
+ 
+ //#define BLOCK_DELTA_REDUCE
+diff -ur rodinia_2.3/cuda/lavaMD/makefile rodinia_2.3_patched/cuda/lavaMD/makefile
+--- rodinia_2.3/cuda/lavaMD/makefile	2011-11-09 20:44:49.000000000 +0100
++++ rodinia_2.3_patched/cuda/lavaMD/makefile	2013-05-02 18:52:20.932423320 +0200
+@@ -29,7 +29,7 @@
+ 			./util/timer/timer.o \
+ 			./util/device/device.o \
+ 			-lm \
+-			-L/usr/local/cuda/lib64 \
++			-L$(CUDA_LIB_DIR) \
+ 			-lcuda -lcudart \
+ 			$(OMP_LIB) \
+ 			-o lavaMD
+Binary files rodinia_2.3/cuda/pathfinder/pathfinder and rodinia_2.3_patched/cuda/pathfinder/pathfinder differ
+diff -ur rodinia_2.3/cuda/srad/srad_v2/srad.cu rodinia_2.3_patched/cuda/srad/srad_v2/srad.cu
+--- rodinia_2.3/cuda/srad/srad_v2/srad.cu	2010-10-08 06:22:43.000000000 +0200
++++ rodinia_2.3_patched/cuda/srad/srad_v2/srad.cu	2013-05-02 18:53:32.437979275 +0200
+@@ -3,13 +3,13 @@
+ #include <stdio.h>
+ #include <string.h>
+ #include <math.h>
+-#include <srad.h>
++#include "srad.h"
+ 
+ // includes, project
+ #include <cuda.h>
+ 
+ // includes, kernels
+-#include <srad_kernel.cu>
++#include "srad_kernel.cu"
+ 
+ void random_matrix(float *I, int rows, int cols);
+ void runTest( int argc, char** argv);
+diff -ur rodinia_2.3/cuda/srad/srad_v2/srad_kernel.cu rodinia_2.3_patched/cuda/srad/srad_v2/srad_kernel.cu
+--- rodinia_2.3/cuda/srad/srad_v2/srad_kernel.cu	2010-10-08 06:22:43.000000000 +0200
++++ rodinia_2.3_patched/cuda/srad/srad_v2/srad_kernel.cu	2013-05-02 18:54:12.278846045 +0200
+@@ -1,4 +1,4 @@
+-#include <srad.h>
++#include "srad.h"
+ #include <stdio.h>
+ 
+ __global__ void
+diff -ur rodinia_2.3/cuda/streamcluster/Makefile rodinia_2.3_patched/cuda/streamcluster/Makefile
+--- rodinia_2.3/cuda/streamcluster/Makefile	2010-10-08 06:22:43.000000000 +0200
++++ rodinia_2.3_patched/cuda/streamcluster/Makefile	2013-05-02 18:55:24.960427181 +0200
+@@ -2,7 +2,7 @@
+ 
+ NVCC = $(CUDA_DIR)/bin/nvcc
+ 
+-NVCC_FLAGS = -I$(CUDA_DIR)/include
++NVCC_FLAGS = -I$(CUDA_DIR)/include -L$(CUDA_LIB_DIR)
+ 
+ TARGET_G = sc_gpu
+ 
+diff -ur rodinia_2.3/Makefile rodinia_2.3_patched/Makefile
+--- rodinia_2.3/Makefile	2011-11-23 20:34:28.000000000 +0100
++++ rodinia_2.3_patched/Makefile	2013-05-02 19:31:33.951362334 +0200
+@@ -15,7 +15,8 @@
+ CUDA: 
+ 	cd cuda/backprop;		make;	cp backprop $(CUDA_BIN_DIR)
+ 	cd cuda/bfs; 			make;	cp bfs $(CUDA_BIN_DIR)
+-	cd cuda/cfd; 			make;	cp euler3d euler3d_double pre_euler3d pre_euler3d_double $(CUDA_BIN_DIR)
++# 	cd cuda/cfd; 			make;	cp euler3d euler3d_double pre_euler3d pre_euler3d_double $(CUDA_BIN_DIR)
++	cd cuda/cfd; 			make;	cp euler3d $(CUDA_BIN_DIR)
+ 	cd cuda/gaussian;		make;	cp gaussian $(CUDA_BIN_DIR)
+ 	cd cuda/heartwall;  		make;	cp heartwall $(CUDA_BIN_DIR)
+ 	cd cuda/hotspot; 		make;	cp hotspot $(CUDA_BIN_DIR)
+@@ -64,10 +65,11 @@
+ 	cd opencl/nw;				make;	cp nw		$(OPENCL_BIN_DIR)
+ 	cd opencl/srad;				make; 	cp srad		$(OPENCL_BIN_DIR)
+ 	cd opencl/streamcluster;		make;	cp streamcluster	$(OPENCL_BIN_DIR)
+-	cd opencl/pathfinder;			make;	cp pathfinder	$(OPENCL_BIN_DIR)
+-	cd opencl/particlefilter;		make;	cp OCL_particlefilter_naive OCL_particlefilter_float $(OPENCL_BIN_DIR)
+-	cd opencl/gaussian;			make;	cp gaussian	$(OPENCL_BIN_DIR)
+-	cd opencl/nn;				make;	cp nn	$(OPENCL_BIN_DIR)
++# 	cd opencl/pathfinder;			make;	cp pathfinder	$(OPENCL_BIN_DIR)
++# 	cd opencl/particlefilter;		make;	cp OCL_particlefilter_naive OCL_particlefilter_float $(OPENCL_BIN_DIR)
++	cd opencl/particlefilter;		make;	cp OCL_particlefilter_naive $(OPENCL_BIN_DIR)
++# 	cd opencl/gaussian;			make;	cp gaussian	$(OPENCL_BIN_DIR)
++# 	cd opencl/nn;				make;	cp nn	$(OPENCL_BIN_DIR)
+ 	cd opencl/heartwall;		make;	cp heartwall	$(OPENCL_BIN_DIR)
+ 	
+ clean: CUDA_clean OMP_clean OCL_clean
+diff -ur rodinia_2.3/openmp/mummergpu/src/common.cu rodinia_2.3_patched/openmp/mummergpu/src/common.cu
+--- rodinia_2.3/openmp/mummergpu/src/common.cu	2010-10-08 06:22:46.000000000 +0200
++++ rodinia_2.3_patched/openmp/mummergpu/src/common.cu	2013-05-02 19:05:18.036220294 +0200
+@@ -3,6 +3,7 @@
+ // Children are labeled as ACGT$
+ const int basecount = 5;
+ 
++#include <stdint.h>
+ 
+ // Note: max pixel size is 16 bytes
+ 
+diff -ur rodinia_2.3/openmp/mummergpu/src/mummergpu.cu rodinia_2.3_patched/openmp/mummergpu/src/mummergpu.cu
+--- rodinia_2.3/openmp/mummergpu/src/mummergpu.cu	2010-10-08 06:22:46.000000000 +0200
++++ rodinia_2.3_patched/openmp/mummergpu/src/mummergpu.cu	2013-05-02 19:04:12.130753674 +0200
+@@ -457,7 +457,7 @@
+ 
+ }
+ 
+-void boardMemory(unsigned int * free_mem, unsigned int * total_mem)
++void boardMemory(size_t * free_mem, size_t * total_mem)
+ {
+   // The emulator doesn't allow calls to cuMemGetInfo
+ 
+@@ -1070,8 +1070,8 @@
+ 	fprintf(stderr, "Allocating result array for %d queries (%d bytes) ...", 
+ 			numQueries, numCoords*sizeof(MatchCoord) );
+ 	
+-    unsigned int boardFreeMemory = 0;
+-    unsigned int total_mem = 0;
++    size_t boardFreeMemory = 0;
++    size_t total_mem = 0;
+ 
+ 	boardMemory(&boardFreeMemory, &total_mem);
+ 
+@@ -1508,8 +1508,8 @@
+ {
+     assert(!ctx->reverse && !ctx->forwardreverse);
+     
+-    unsigned int boardFreeMemory;
+-    unsigned int total_mem;
++    size_t boardFreeMemory;
++    size_t total_mem;
+ 
+     if (!on_cpu)
+ 	{
+@@ -2072,8 +2072,8 @@
+ 
+ int getFreeDeviceMemory(bool on_cpu)
+ {
+-	unsigned int free_mem = 0;
+-	unsigned int total_mem = 0;
++	size_t free_mem = 0;
++	size_t total_mem = 0;
+ 	
+ 	// We have to 'prime' CUDA by making an allocation here.  cuMemGetInfo 
+ 	// will return zeroes until we do a malloc.
+diff -ur rodinia_2.3/openmp/mummergpu/src/mummergpu_gold.cpp rodinia_2.3_patched/openmp/mummergpu/src/mummergpu_gold.cpp
+--- rodinia_2.3/openmp/mummergpu/src/mummergpu_gold.cpp	2010-10-08 06:22:46.000000000 +0200
++++ rodinia_2.3_patched/openmp/mummergpu/src/mummergpu_gold.cpp	2013-05-02 18:57:11.850792196 +0200
+@@ -1,5 +1,6 @@
+ #include <stdio.h>
+ #include <string.h>
++#include <stdint.h>
+ 
+ #include <fstream>
+ 
+diff -ur rodinia_2.3/openmp/mummergpu/src/mummergpu_kernel.cu rodinia_2.3_patched/openmp/mummergpu/src/mummergpu_kernel.cu
+--- rodinia_2.3/openmp/mummergpu/src/mummergpu_kernel.cu	2010-10-08 06:22:46.000000000 +0200
++++ rodinia_2.3_patched/openmp/mummergpu/src/mummergpu_kernel.cu	2013-05-02 19:10:26.915368247 +0200
+@@ -43,9 +43,9 @@
+ #endif
+ 
+ #if REFTEX
+-#define GETRCHAR(refpos) getRef(refpos)
++#define GETRCHAR(refpos) getRef_GPU(refpos)
+ #else
+-#define GETRCHAR(refpos) getRef(refpos, ref)
++#define GETRCHAR(refpos) getRef_GPU(refpos, ref)
+ #endif
+ 
+ 
+@@ -300,10 +300,10 @@
+ }
+ 
+ //////////////////////////////////
+-/// getRef
++/// getRef_GPU
+ //////////////////////////////////
+ 
+-__device__ char getRef(int refpos
++__device__ char getRef_GPU(int refpos
+ #if !REFTEX
+ 					   ,char* ref
+ #endif
+@@ -992,7 +992,7 @@
+ 
+ 		 while (refpos <= MKI(node.end) && c != '\0')
+ 		 { 
+-            char r = getRef(refpos
++            char r = getRef_GPU(refpos
+ #if !REFTEX
+ 							//FIXME: this needs to be a pointer to ref->d_ref_array
+ 							,NULL
+diff -ur rodinia_2.3/openmp/mummergpu/src/PoolMalloc.cpp rodinia_2.3_patched/openmp/mummergpu/src/PoolMalloc.cpp
+--- rodinia_2.3/openmp/mummergpu/src/PoolMalloc.cpp	2010-10-08 06:22:46.000000000 +0200
++++ rodinia_2.3_patched/openmp/mummergpu/src/PoolMalloc.cpp	2013-05-02 19:00:01.869342080 +0200
+@@ -2,6 +2,7 @@
+ //#include "CUtilities.h"
+ #include <iostream>
+ #include <cstring>
++#include <stdio.h>
+ using namespace std;
+ 
+ static const size_t POOLBLOCKSIZE = 10*1024*1024;
+diff -ur rodinia_2.3/openmp/mummergpu/src/suffix-tree.cpp rodinia_2.3_patched/openmp/mummergpu/src/suffix-tree.cpp
+--- rodinia_2.3/openmp/mummergpu/src/suffix-tree.cpp	2010-10-08 06:22:46.000000000 +0200
++++ rodinia_2.3_patched/openmp/mummergpu/src/suffix-tree.cpp	2013-05-02 18:58:13.428160511 +0200
+@@ -8,6 +8,7 @@
+ #include <vector>
+ #include <queue>
+ #include <cstring>
++#include <stdint.h>
+ 
+ #include <sys/stat.h>
+ #include <fcntl.h>
