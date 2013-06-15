@@ -1,0 +1,19 @@
+#! /bin/sh
+
+#
+# Mario Kicherer (http://kicherer.org)
+#
+# This script removes all _except the last two_ packages matching linux-image-[0-9]*
+# and their corresponding header packages.
+#
+
+list=""
+while read x; do
+	list="${list} $x"
+done <<EOF
+`dpkg -l 'linux-image-[0-9]*' | grep ii | awk '{print $2}' | sort | head -n -2`
+EOF
+
+apt-get purge $list ${list/image/headers}
+
+update-grub2
