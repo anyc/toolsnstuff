@@ -1,0 +1,99 @@
+#! /bin/bash
+
+# This script starts a command in a separate Linux namespace
+# and creates a virtual ethernet devices between host and
+# guest namespace to communicate with the guest command.
+
+# Mario Kicherer (http://kicherer.org)
+
+MODE=$1
+NAME=$2
+CMD=$3
+
+CFGFILE=/etc/ns_container_${NAME}_conf.sh
+
+PIDFILE=/var/run/ns_container_${NAME}.pid
+LOGFILE=/var/log/ns_container_${NAME}.pid
+
+IF_HOST=${IF_HOST-ns_${NAME}0}
+IF_GUEST=${IF_GUEST-${NAME}0}
+
+HOST_IP=${HOST_IP-192.168.5.1}
+GUEST_IP=${GUEST_IP-192.168.5.2}
+
+if [ "${MODE}" == "stop" ]; then
+	ip link delete dev ${IF_HOST} type veth
+	
+	if [ -e $PIDFILE ]; then
+			PID=$(cat $PIDFILE )
+# 			kill $PID
+			rm ${PIDFILE}
+	else
+			echo $PIDFILE not found
+			exit 1
+	fi
+	
+	exit 0
+fi
+
+if [ "${MODE}" == "start" ]; then
+	echo "starting container"
+	unshare -n -u -m -i ${0} child ${NAME} ${CMD} > ${LOGFILE} &
+	PID=$!
+
+	echo "$NAME container PID $PID"
+	echo $PID > $PIDFILE
+
+	echo "setup IF_GUEST"
+	ip link add name ${IF_HOST} type veth peer name ${IF_GUEST}
+	
+	if [ "${MAC}" != "" ]; then
+		ifconfig ${IF_GUEST} hw ether ${MAC}
+	fi
+	
+	echo "send IF_GUEST to container"
+	ip link set ${IF_GUEST} netns $PID
+	
+	echo "setup IF_HOST"
+	ifconfig ${IF_HOST} ${HOST_IP}
+	ifconfig ${IF_HOST} up
+
+	for f in "${FORWARDS[@]}"; do
+		socat TCP-LISTEN:${f},fork ${GUEST_IP}:${f} &
+	done
+	
+	exit 0
+fi
+
+if [ "${MODE}" == "child" ]; then
+	if [ "${GUEST_HOSTNAME}" != "" ]; then
+		echo "setting hostname ${GUEST_HOSTNAME}"
+		hostname ${GUEST_HOSTNAME}
+	fi
+	
+	echo "waiting on guest IF: ${IF_GUEST}"
+	while true; do
+		if ifconfig -a | grep ${IF_GUEST} > /dev/null; then
+			break
+		fi
+		sleep 1
+	done
+	
+	ip link set dev ${IF_GUEST} name eth0
+
+	echo "setting up guest IFs"
+	ifconfig lo 127.0.0.1
+	ifconfig eth0 ${GUEST_IP}
+	ifconfig eth0 up
+	
+	echo "start ${CMD}"
+	screen -d -m -S ${NAME} ${CMD}
+	
+	while [ -e ${PIDFILE} ]; do sleep 1; done;
+	echo "guest shutdown"
+	
+	exit 0
+fi
+
+echo "Usage: $0 <start|stop> <name> <cmd>"
+exit 1
