@@ -12,6 +12,10 @@ CMD=$3
 
 CFGFILE=/etc/ns_container_${NAME}_conf.sh
 
+if [ -e ${CFGFILE} ]; then
+	source ${CFGFILE}
+fi
+
 PIDFILE=/var/run/ns_container_${NAME}.pid
 LOGFILE=/var/log/ns_container_${NAME}.pid
 
@@ -44,7 +48,7 @@ if [ "${MODE}" == "start" ]; then
 	echo "$NAME container PID $PID"
 	echo $PID > $PIDFILE
 
-	echo "setup IF_GUEST"
+	echo "setup virtual ethernet IFs"
 	ip link add name ${IF_HOST} type veth peer name ${IF_GUEST}
 	
 	if [ "${MAC}" != "" ]; then

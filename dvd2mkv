@@ -1,0 +1,243 @@
+#! /usr/bin/env python2
+# -*- coding: utf-8 -*-
+#
+# dvd2mkv website: http://github.com/anyc/toolsnstuff/
+#
+# Mario Kicherer (http://kicherer.org)
+#
+
+import os, sys,subprocess, mimetypes, datetime;
+from argparse import ArgumentParser,RawTextHelpFormatter
+try:
+	from imdb import IMDb
+except ImportError:
+	pass
+
+parser = ArgumentParser(description="""
+dvd2mkv
+-------
+
+Unlike similar tools, dvd2mkv backups your DVD or the ISO of a DVD into a
+MKV-Container _without_ re-encoding and with all audio and subtitle tracks.
+
+Dependencies:
+	- lsdvd
+	- mplayer
+	- mencoder (sometimes included in mplayer packages)
+	- ogmtools (for dvdxchap)
+	- mkvtoolnix (for mkvmerge)
+
+Optional dependencies:
+	- IMDbPY (http://imdbpy.sourceforge.net/)
+""", formatter_class=RawTextHelpFormatter)
+
+parser.add_argument('-i', dest='input', help='input file/device', action='store')
+parser.add_argument('-s', dest='tracks', help='select tracks', action='store')
+parser.add_argument('-t', dest='title', help='DVD title', action='store')
+parser.add_argument('--imdb-episode', dest='imdb_episode', help='Try to find episode with IMDB', action='store_true')
+parser.add_argument('--imdb-movie', dest='imdb_movie', help='Try to find movie with IMDB', action='store_true')
+parser.add_argument('-c', dest='cleanup', help='Disable cleanup of temporary files', action='store_false')
+
+args = parser.parse_args()
+
+# check required programs
+check_binaries = ["mplayer", "lsdvd", "dvdxchap", "mencoder", "mkvmerge"]
+for c in check_binaries:
+	ret = os.system("which "+c+"  >/dev/null 2>&1");
+	if ret:
+		print c+" not found, aborting.";
+		print "Required tools: "+str(check_binaries)
+		sys.exit(1);
+
+# find input file
+inputfile = None
+if args.input:
+	if not os.path.exists(args.input):
+		print "Input file \""+args.input+"\" not found, aborting."
+		sys.exit(1);
+	else:
+		inputfile = args.input
+else:
+	inputlist = ["/dev/dvd", "/dev/sr0"]
+	for i in inputlist:
+		if os.path.exists(i):
+			inputfile = i;
+			break;
+
+if not inputfile:
+	print "Cannot find input file, aborting."
+	sys.exit(1);
+
+print "Analyzing DVD..."
+
+p = subprocess.Popen("lsdvd -x -Oy \"%s\"" % (inputfile), shell=True,stdout=subprocess.PIPE,close_fds=True);
+output = p.stdout.readlines();
+p.stdout.close()
+if p.wait() != 0:
+	print "error while analysing with lsdvd"
+	print output
+	exit(1);
+
+# convert lsdvd output into python data structure
+exec(" ".join(output));
+
+# determine tracks to copy
+if args.tracks and args.tracks.strip() != "":
+	tracks = [int(i)-1 for i in args.tracks.split(" ")]
+else:
+	track_start = 0;
+	track_end = len(lsdvd["track"]);
+	tracks = range(track_start,track_end)
+
+print ""
+
+# determine DVD title
+if args.title:
+	lsdvd["title"] = args.title
+else:
+	if lsdvd["title"] == "unknown":
+		#lsdvd["title"] = raw_input("No title found. Enter title:");
+		#if lsdvd["title"].strip() == "":
+		lsdvd["title"] = datetime.datetime.now().strftime("unknown_%Y%m%d_%H%M%S");
+
+# try to find title with pyIMDB, if requested
+if IMDb:
+	ia = IMDb('http')
+	
+	movie = None
+	if args.imdb_episode:
+		movie = ia.search_episode(lsdvd["title"])
+	if args.imdb_movie:
+		movie = ia.search_movie(lsdvd["title"])
+	
+	if movie:
+		if args.imdb_episode:
+			ia.update(movie[0])
+			title = "%s: %s s%se%s" % (movie[0]["series title"], str(movie[0]), movie[0]["season"],movie[0]["episode"])
+		if args.imdb_movie:
+			title = "%s" % (str(movie[0]))
+		raw_input("Accept \"%s\" ? [Y]" % title);
+
+print "Using DVD title: "+lsdvd["title"]+"\n";
+
+print "Will copy the following tracks:"
+for i in tracks:
+	print "\tTrack %i: %i min" % ((i+1), lsdvd["track"][i]["length"]/60);
+	for a in range(0,len(lsdvd["track"][i]["audio"])):
+		print "\t\t Audio %i: %s, %s codec, %s channels" % (lsdvd["track"][i]["audio"][a]["ix"],lsdvd["track"][i]["audio"][a]["language"],lsdvd["track"][i]["audio"][a]["format"],lsdvd["track"][i]["audio"][a]["channels"]);
+	for s in range(0,len(lsdvd["track"][i]["subp"])):
+		print "\t\t Subtitle %i: %s" % (s, lsdvd["track"][i]["subp"][s]["language"]);
+
+print ""
+
+# create work directory
+ret = os.system("mkdir -p \""+lsdvd["title"]+"\"");
+if ret:
+	print "mkdir failed.";
+	sys.exit(1);
+
+#ifofile = "/VIDEO_TS/VTS_01_0.IFO";
+#if os.path.isfile(mountpoint+"VIDEO_TS/VTS_01_0.IFO"):
+	#ifofile = mountpoint+"VIDEO_TS/VTS_01_0.IFO";
+
+#if os.path.isfile(mountpoint+"video_ts/vts_01_0.ifo"):
+	#ifofile = mountpoint+"video_ts/vts_01_0.ifo";
+
+# start processing tracks
+for i in tracks:
+	track = "%i" %(i+1);
+	trackdir = lsdvd["title"]+"/track_"+track+"/";
+	vobfile = trackdir+"track_"+track+".vob";
+	
+	print "\nProcessing track "+track+"...";
+	
+	# create work directory for track
+	ret = os.system("mkdir -p \""+lsdvd["title"]+"/track_"+track+"\"");
+	
+	# check if we already processed this track
+	if os.path.isfile(trackdir+"track_"+track+".mkv"):
+		print " - mkv already exists, skipping.";
+	else:
+		if os.path.isfile(vobfile):
+			print " - vobfile for track "+track+" already exists. Skipping.";
+		else:
+			print " - extract vobfile (this might take a while) ...";
+			ret = os.system("mplayer dvd://%s -dvd-device \"%s\" -dumpstream -dumpfile \"%s\" > /dev/null" %
+				(track,inputfile,vobfile));
+			if ret:
+				print "mplayer failed for track "+track;
+		
+		print " - extract chapters"
+		chapterfile = lsdvd["title"]+"/track_"+track+"/chapters.txt";
+		ret = os.system("dvdxchap -t "+track+" \""+inputfile+"\" > \""+chapterfile+"\"");
+		if os.path.isfile(chapterfile):
+			chapters = "--chapters \""+trackdir+"chapters.txt\"";
+		
+		# get subtitles
+		subs=""
+		for s in range(0,len(lsdvd["track"][i]["subp"])):
+			a = lsdvd["track"][i]["subp"][s];
+			sid = str(int(lsdvd["track"][i]["subp"][s]["streamid"],16));
+			subfile = trackdir+"vobsubs_"+sid+"_"+a["langcode"];
+			subidx = trackdir+"vobsubs_"+sid+"_"+a["langcode"]+".idx"
+			subsub = trackdir+"vobsubs_"+sid+"_"+a["langcode"]+".sub"
+			
+			if a["content"] == "Undefined":
+				subname=" --track-name 0:\"%s\" " %(a["language"]);
+			else:
+				subname=" --track-name 0:\"%s - %s\" " %(a["language"],a["content"]);
+			sublang=" --language 0:%s " %(a["langcode"]);
+			
+			subs += subname + " " + sublang + " \""+subidx+"\" \""+subsub+"\"";
+			
+			if os.path.isfile(subidx) and os.path.isfile(subsub):
+				print " - It seems that subtitle "+sid+"_"+a["langcode"]+" are already ripped, skipping.";
+				continue
+			
+			print " - extract subtitle \"%s\"" % (lsdvd["track"][i]["subp"][s]["language"]);
+			
+			### old method that required a mounted DVD/ISO, replaced with mencoder
+			#ret = os.system("tccat -i \"%s\" | tcextract -x ps1 -t vob -a %i > \"%ssubs-%i\"" % (vobfile,sid,trackdir,sid));
+			#ret = os.system("subtitle2vobsub -o \""+trackdir+"vobsubs\" -i \""+ifofile+"\" -a %i < \"%ssubs-%i\" " % (sid,trackdir,sid));
+			
+			ret = os.system("mencoder -o /dev/null -nosound -ovc copy -vobsubout \""+subfile+"\" -sid "+sid+" \""+vobfile+"\" > /dev/null");
+			
+		
+		# determine audio track names and languages
+		tracknames=""
+		tracklang=""
+		for a in lsdvd["track"][i]["audio"]:
+			if a["language"] != "Unknown" and a["langcode"] != "xx":
+				if a["content"] == "Undefined":
+					tracknames="%s --track-name %i:\"%s\" " %(tracknames, a["ix"],a["language"]);
+				else:
+					tracknames="%s --track-name %i:\"%s - %s\" " %(tracknames, a["ix"],a["language"],a["content"]);
+				tracklang="%s --language %i:%s " %(tracklang,a["ix"],a["langcode"]);
+		
+		# determine location for final MKV(s)
+		if len(tracks) > 1:
+			tracktitle = lsdvd["title"]+"_track"+track;
+			mkvfile = lsdvd["title"]+"/track_"+track+".mkv";
+		else:
+			tracktitle = lsdvd["title"]
+			mkvfile = lsdvd["title"]+".mkv";
+		
+		if os.path.isfile(mkvfile):
+			print " - mkvfile for track "+track+" already exists. Skipping.";
+		else:
+			print ""
+			print "mkvmerge --title \""+tracktitle+"\" -o \""+mkvfile+"\" "+chapters+" "+tracknames+" "+tracklang+" \""+vobfile+"\" "+subs;
+			print ""
+			
+			# merge final mkv
+			ret = os.system("mkvmerge --title \""+tracktitle+"\" -o \""+mkvfile+"\" "+chapters+" "+tracknames+" "+tracklang+" \""+vobfile+"\" "+subs);
+		
+		if args.cleanup:
+			os.system("rm -r \""+trackdir+"\"");
+
+if args.cleanup:
+	if len(tracks) == 1:
+		os.system("rm -r \""+lsdvd["title"]+"\"");
+
+
+
