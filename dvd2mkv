@@ -31,8 +31,10 @@ Optional dependencies:
 	- IMDbPY (http://imdbpy.sourceforge.net/)
 """, formatter_class=RawTextHelpFormatter)
 
-parser.add_argument('-i', dest='input', help='input file/device', action='store')
-parser.add_argument('-s', dest='tracks', help='select tracks', action='store')
+inputlist = ["/dev/dvd", "/dev/sr0"]
+
+parser.add_argument('-i', dest='input', help='input file/device (defaults: '+str(inputlist)+")", action='store')
+parser.add_argument('-s', dest='tracks', help='select tracks (e.g., -s "2 3")', action='store')
 parser.add_argument('-t', dest='title', help='DVD title', action='store')
 parser.add_argument('--imdb-episode', dest='imdb_episode', help='Try to find episode with IMDB', action='store_true')
 parser.add_argument('--imdb-movie', dest='imdb_movie', help='Try to find movie with IMDB', action='store_true')
@@ -58,7 +60,6 @@ if args.input:
 	else:
 		inputfile = args.input
 else:
-	inputlist = ["/dev/dvd", "/dev/sr0"]
 	for i in inputlist:
 		if os.path.exists(i):
 			inputfile = i;
@@ -75,7 +76,7 @@ output = p.stdout.readlines();
 p.stdout.close()
 if p.wait() != 0:
 	print "error while analysing with lsdvd"
-	print output
+	print " ".join(output)
 	exit(1);
 
 # convert lsdvd output into python data structure
