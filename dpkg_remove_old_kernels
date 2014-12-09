@@ -1,9 +1,9 @@
-#! /bin/sh
+#! /bin/bash
 
 #
 # Mario Kicherer (http://kicherer.org)
 #
-# This script removes all _except the last two_ packages matching linux-image-[0-9]*
+# This script removes all kernels except the current and the latest two images
 # and their corresponding header packages.
 #
 
@@ -11,9 +11,9 @@ list=""
 while read x; do
 	list="${list} $x"
 done <<EOF
-`dpkg -l 'linux-image-[0-9]*' | grep ii | awk '{print $2}' | sort | head -n -2`
+`dpkg -l 'linux-image-[0-9]*' | grep ii | awk '{print $2}' | sort | head -n -2 | grep -v "$(uname -a | awk '{print $3}')"`
 EOF
 
 apt-get purge $list ${list/image/headers}
 
-update-grub2
+update-grub
