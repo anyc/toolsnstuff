@@ -1,0 +1,38 @@
+#! /bin/bash
+#
+# Portage logs which files a package installs. This script checks if any file
+# installed by any package is missing.
+#
+# Mario Kicherer (dev@kicherer.org)
+
+list_of_dmg_pkgs=""
+
+# get list of all packages
+pkgs=$(equery l "*")
+
+echo "Number of packages: $(echo "$pkgs" | wc -l)"
+
+i=0
+while read y; do
+	# show progress
+	i=$(( $i + 1 ))
+	if [[ "$(( $i % 100 ))" == "0" ]]; then
+		echo -n "'"
+	else
+		echo -n "."
+	fi
+
+	# get file list of package
+	while read x; do
+		if [[ -d "$x" ]]; then
+			continue;
+		fi
+		if [[ ! -e "$x" ]]; then
+			echo "$x" of package "$y" is missing >&2
+			list_of_dmg_pkgs="${list_of_dmg_pkgs} =$y"
+		fi;
+	done < <(equery -C f $y)
+done < <(echo "${pkgs}")
+
+echo ""
+echo "emerge -av1 ${list_of_dmg_pkgs}"
