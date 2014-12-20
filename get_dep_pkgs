@@ -1,0 +1,13 @@
+#! /bin/bash
+#
+# This script lists the dependencies of an executable or library in terms of
+# Gentoo packages
+#
+# Usage: get_dep_pkgs libmylib.so
+#
+
+LIST=$(while read x; do
+	equery -q b $x
+done < <(objdump -p "${1}" | grep NEEDED | awk '{ print $2; }') )
+
+echo "${LIST}" | sort | uniq
