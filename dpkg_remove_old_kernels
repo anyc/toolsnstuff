@@ -3,15 +3,15 @@
 #
 # Mario Kicherer (http://kicherer.org)
 #
-# This script removes all kernels except the current and the latest two images
-# and their corresponding header packages.
+# This script removes all kernels except the one currently booted and except the one with the highest version
+# as well as their corresponding header packages. Afterwards, it updates the configuration of the GRUB bootloader.
 #
 
 list=""
 while read x; do
 	list="${list} $x"
 done <<EOF
-`dpkg -l 'linux-image-[0-9]*' | grep ii | awk '{print $2}' | sort | head -n -2 | grep -v "$(uname -a | awk '{print $3}')"`
+`dpkg -l 'linux-image-[0-9]*' | grep ii | awk '{print $2}' | sort -V |  grep -v "$(uname -a | awk '{print $3}')" | head -n -1`
 EOF
 
 apt-get purge $list ${list/image/headers}
