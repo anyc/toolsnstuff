@@ -1,0 +1,28 @@
+#! /bin/sh
+
+# Generate a list of repositories for unattended-upgrades from the list of enabled APT sources
+#
+# The generated list has to be manually added to: /etc/apt/apt.conf.d/50unattended-upgrades
+#
+# See: http://kicherer.org/joomla/index.php/en/blog/37-automatic-updates-of-all-packages-under-ubuntu
+#
+# Mario Kicherer (http://kicherer.org)
+
+
+# replace occurences of these values with variables later
+distro_id=$(lsb_release -i | sed  "s/^.*:[[:space:]+]//")
+codename=$(lsb_release -c | sed  "s/^.*:[[:space:]+]//")
+
+echo "Unattended-Upgrade::Allowed-Origins {"
+
+list=""
+for x in /var/lib/apt/lists/*Release; do
+	orig=$(grep "Origin:" "${x}" | cut -d " " -f2 | sed "s/${distro_id}/\${distro_id}/")
+	suite=$(grep "Suite" "${x}" | cut -d " " -f2 | sed "s/${codename}/\${distro_codename}/")
+
+	list="${list}	\"${orig}:${suite}\";\n"
+done;
+
+echo "${list%??}" | sort
+
+echo "};"
