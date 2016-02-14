@@ -267,13 +267,16 @@ for event in events:
 	reorder_buf[idx] = (text, hdr)
 	outqueue.task_done()
 	
-	if last_idx+1 in reorder_buf.keys():
+	while last_idx+1 in reorder_buf.keys():
 		last_idx += 1
 		text, hdr = reorder_buf[last_idx]
 		
 		out.write(hdr + text.strip() + '\n\n')
 		p = i*100 / l
 		sys.stdout.write('\r%d%%' % p)
+
+if last_idx != l:
+	print("error %d != %d" %(last_idx, l))
 
 # make the threads quit
 for w in workers:
