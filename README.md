@@ -10,7 +10,7 @@ Tools and other useful stuff, e.g.,
 * get_dep_pkgs: wrapper for ldd to show dependencies of an executable as Gentoo packages
 * get_mapped_files_of_pid.sh: show files opened by a process
 * get_total_pkgs_size.sh: get disk usage of a set of Gentoo packages
-* linux-namespaces: starts a command in a separate Linux namespace and creates a virtual ethernet devices between host and guest namespace to communicate with the guest command.
+* linux-namespaces: starts a command in a separate Linux namespace and creates virtual ethernet devices between host and guest namespace to communicate with the guest command.
 * gitpretty: show Git commit history with visualized branches
 * list_pkgs_by_size.sh: sort installed packages by disk space usage on Gentoo
 * nemo-installer4maemo.sh: install Nemo on the SD card from within Maemo (Nokia N900)

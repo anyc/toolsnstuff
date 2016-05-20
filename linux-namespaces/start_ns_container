@@ -1,7 +1,7 @@
 #! /bin/bash
 
 # This script starts a command in a separate Linux namespace
-# and creates a virtual ethernet devices between host and
+# and creates virtual ethernet devices between host and
 # guest namespace to communicate with the guest command.
 
 # Mario Kicherer (http://kicherer.org)
