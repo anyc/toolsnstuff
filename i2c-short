@@ -1,0 +1,86 @@
+#! /bin/bash
+#
+# i2c-short
+# ---------
+#
+# i2c-short is a simple shell wrapper for i2c-tools (e.g., i2cget) to talk with i2c
+# devices that use 16 bit (= short integer) register addressing
+#
+# The i2c protocol only supports 8 bit register addresses. However, some i2c
+# devices offer access to more than 256 registers. To address the higher registers,
+# the 8 least-significant bits of the address are passed as data over the i2c
+# bus. This wrapper script splits the 16 bit address and calls the i2c-tools
+# accordingly.
+#
+# Written 2017 by Mario Kicherer (http://kicherer.org)
+#
+# Usage:
+#
+#   i2cshort <read|write> <i2c bus> <device address> <register address> [data]
+#   i2cshort <dump-single> <i2c bus> <device address> <register address> <number of bytes>
+#   i2cshort <dump-multi> <i2c bus> <device address> <register address> <number of bytes>
+#
+
+MODE=$1
+BUS=$2
+DEV_ADDR=$3
+REG_ADDR=$4
+
+shift 4
+DATA=$*
+
+I2CSET=${I2CSET:-i2cset}
+I2CGET=${I2CGET:-i2cget}
+
+read_addr() {
+	${I2CSET} -y $1 $2 $(printf "0x%x 0x%x" $(( $3 / 0x100 )) $(( $3 % 0x100 )))
+	${I2CGET} -y $1 $2
+}
+
+dump_single_column() {
+	NBYTES=${DATA}
+	for i in `seq 0 $(( $NBYTES - 1 ))`; do
+		printf "0x%02x " $(( ${REG_ADDR} + $i ))
+		read_addr ${BUS} ${DEV_ADDR} $(( ${REG_ADDR} + $i ))
+	done
+}
+
+dump_multi_column() {
+	NBYTES=${DATA}
+	
+	printf "       " 
+	for x in `seq 0 7`; do
+		printf "%2x " $x
+	done
+	echo ""
+
+	for y in `seq 0 $(( ($NBYTES - 1) / 8 ))`; do
+		printf "0x%04x " $(( ${REG_ADDR} + $y * 8 ))
+		for x in `seq 0 7`; do
+			BYTE=$(read_addr ${BUS} ${DEV_ADDR} $(( ${REG_ADDR} + $y * 8 + $x )))
+			printf "%02x " ${BYTE}
+			
+		done
+		echo ""
+	done
+}
+
+case $MODE in
+	r|read)
+		read_addr ${BUS} ${DEV_ADDR} ${REG_ADDR}
+		;;
+	w|write)
+		${I2CSET} -y ${BUS} ${DEV_ADDR} $(printf "0x%x 0x%x" $(( ${REG_ADDR} / 0x100 )) $(( ${REG_ADDR} % 0x100 ))) ${DATA} i
+		;;
+	dump-single)
+		dump_single_column
+		;;
+	d|dump-multi)
+		dump_multi_column
+		;;
+	*)
+		echo "$0 <read|write> <i2c bus> <device address> <register address> [data]"
+		echo "$0 <dump-single> <i2c bus> <device address> <register address> <number of bytes>"
+		echo "$0 <dump-multi> <i2c bus> <device address> <register address> <number of bytes>"
+		;;
+esac
