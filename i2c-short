@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/bash -e
 #
 # i2c-short
 # ---------
@@ -32,8 +32,21 @@ DATA=$*
 I2CSET=${I2CSET:-i2cset}
 I2CGET=${I2CGET:-i2cget}
 
+split_into_bytes() {
+	# split large values into hexadecimal bytes
+	RES=""
+	for d in $1; do
+		while [ "$(( $d > 0xff ))" == "1" ]; do 
+			RES="$(printf "0x%x" $(( $d % 0x100 ))) ${RES}"
+			d="$(( $d / 0x100 ))"
+		done
+	done
+	echo "$(printf "0x%x " $d) $RES"
+}
+
 read_addr() {
-	${I2CSET} -y $1 $2 $(printf "0x%x 0x%x" $(( $3 / 0x100 )) $(( $3 % 0x100 )))
+	REG_ADDR=$(split_into_bytes $3)
+	${I2CSET} -y $1 $2 ${REG_ADDR}
 	${I2CGET} -y $1 $2
 }
 
@@ -70,7 +83,10 @@ case $MODE in
 		read_addr ${BUS} ${DEV_ADDR} ${REG_ADDR}
 		;;
 	w|write)
-		${I2CSET} -y ${BUS} ${DEV_ADDR} $(printf "0x%x 0x%x" $(( ${REG_ADDR} / 0x100 )) $(( ${REG_ADDR} % 0x100 ))) ${DATA} i
+		REG_ADDR=$(split_into_bytes ${REG_ADDR})
+		DATA=$(split_into_bytes ${DATA})
+		
+		${I2CSET} -y ${BUS} ${DEV_ADDR} ${REG_ADDR} ${DATA} i
 		;;
 	dump-single)
 		dump_single_column
